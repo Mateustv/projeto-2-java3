@@ -1,0 +1,9 @@
+br\com\caixa\cobranca\emissor\StatusResourceTest.class
+br\com\caixa\cobranca\emissor\BoletoPayloadInvalidoTest.class
+br\com\caixa\cobranca\emissor\RegistroGatewayTest.class
+br\com\caixa\cobranca\emissor\AutenticacaoBoletoResourceTest.class
+br\com\caixa\cobranca\emissor\LimiteEmissaoConfigTest.class
+br\com\caixa\cobranca\emissor\ObservabilidadeTest.class
+br\com\caixa\cobranca\emissor\OpenApiResourceTest.class
+br\com\caixa\cobranca\emissor\BoletoResourceTest.class
+br\com\caixa\cobranca\emissor\LimiteEmissaoConfigTest$LimiteBaixoProfile.class

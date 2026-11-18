@@ -1,0 +1,588 @@
+{
+  "info": {
+    "name": "Central de Cobranca - Validacao Manual e Banca",
+    "description": "Collection para validacao manual dos modulos boleto-emissor, boleto-registro e boleto-consulta. Todos os endpoints e payloads foram baseados no codigo real do projeto.\n\nObservacoes importantes:\n- Credenciais Basic reais seedadas: operador/operador123 e auditor/auditor123.\n- UUID de exemplo real no consulta (dev/test): 11111111-1111-1111-1111-111111111111.\n- Fault tolerance 503 exige boleto-registro fora do ar manualmente.\n- Cenario 502 existe no codigo do emissor para rejeicao 4xx do servico de registro, mas nao e reproduzivel no setup padrao apenas com chamadas HTTP desta collection.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "emissorUrl", "value": "http://localhost:8080" },
+    { "key": "registroUrl", "value": "http://localhost:8081" },
+    { "key": "consultaUrl", "value": "http://localhost:8082" },
+    { "key": "operadorUsuario", "value": "operador" },
+    { "key": "operadorSenha", "value": "operador123" },
+    { "key": "auditorUsuario", "value": "auditor" },
+    { "key": "auditorSenha", "value": "auditor123" },
+    { "key": "boletoId", "value": "" },
+    { "key": "numeroControleCliente", "value": "" },
+    { "key": "registroIdentificador", "value": "" },
+    { "key": "boletoConsultaExemploId", "value": "11111111-1111-1111-1111-111111111111" }
+  ],
+  "item": [
+    {
+      "name": "01 - Health e Observabilidade",
+      "item": [
+        {
+          "name": "Emissor - Liveness UP",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{emissorUrl}}/q/health/live",
+            "description": "Objetivo: validar liveness do emissor (C6). Esperado: 200 e status UP."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","const json = pm.response.json();","pm.test('Health UP', function () { pm.expect(json.status).to.eql('UP'); });"]}}]
+        },
+        {
+          "name": "Registro - Liveness UP",
+          "request": { "method": "GET", "header": [], "url": "{{registroUrl}}/q/health/live", "description": "Objetivo: validar liveness do registro (C6). Esperado: 200 e status UP." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","pm.test('Health UP', function () { pm.expect(pm.response.json().status).to.eql('UP'); });"]}}]
+        },
+        {
+          "name": "Consulta - Liveness UP",
+          "request": { "method": "GET", "header": [], "url": "{{consultaUrl}}/q/health/live", "description": "Objetivo: validar liveness do consulta (C6). Esperado: 200 e status UP." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","pm.test('Health UP', function () { pm.expect(pm.response.json().status).to.eql('UP'); });"]}}]
+        },
+        {
+          "name": "Emissor - Readiness UP",
+          "request": { "method": "GET", "header": [], "url": "{{emissorUrl}}/q/health/ready", "description": "Objetivo: validar readiness do emissor (C6). Esperado: 200 e status UP." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","pm.test('Health UP', function () { pm.expect(pm.response.json().status).to.eql('UP'); });"]}}]
+        },
+        {
+          "name": "Registro - Readiness UP",
+          "request": { "method": "GET", "header": [], "url": "{{registroUrl}}/q/health/ready", "description": "Objetivo: validar readiness do registro (C6). Esperado: 200 e status UP." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","pm.test('Health UP', function () { pm.expect(pm.response.json().status).to.eql('UP'); });"]}}]
+        },
+        {
+          "name": "Consulta - Readiness UP",
+          "request": { "method": "GET", "header": [], "url": "{{consultaUrl}}/q/health/ready", "description": "Objetivo: validar readiness do consulta (C6). Esperado: 200 e status UP." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","pm.test('Health UP', function () { pm.expect(pm.response.json().status).to.eql('UP'); });"]}}]
+        },
+        {
+          "name": "Emissor - Metrics contem metrica de negocio",
+          "request": { "method": "GET", "header": [], "url": "{{emissorUrl}}/q/metrics", "description": "Objetivo: verificar metrica de negocio do emissor cobranca_boletos_emissao_solicitacoes_total (C6). Esperado: 200 e corpo contendo a metrica." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","const body = pm.response.text();","pm.test('Metrica de negocio presente', function () { pm.expect(body).to.include('cobranca_boletos_emissao_solicitacoes_total'); });"]}}]
+        },
+        {
+          "name": "Registro - Metrics disponiveis",
+          "request": { "method": "GET", "header": [], "url": "{{registroUrl}}/q/metrics", "description": "Objetivo: validar endpoint de metricas do registro (C6). Esperado: 200." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });"]}}]
+        },
+        {
+          "name": "Consulta - Metrics disponiveis",
+          "request": { "method": "GET", "header": [], "url": "{{consultaUrl}}/q/metrics", "description": "Objetivo: validar endpoint de metricas do consulta (C6). Esperado: 200." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });"]}}]
+        }
+      ]
+    },
+    {
+      "name": "02 - Emissor - Autenticacao e RBAC",
+      "item": [
+        {
+          "name": "POST /boletos sem credencial -> 401",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "noauth" },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"123456\",\n  \"numeroControleCliente\": \"CTRL-SEM-CREDENCIAL\",\n  \"valorNominal\": 50.00\n}" },
+            "description": "Objetivo: autenticao obrigatoria no emissor (C5). Esperado: 401 com desafio Basic."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 401', function () { pm.response.to.have.status(401); });","pm.test('WWW-Authenticate Basic', function () { pm.expect(pm.response.headers.get('WWW-Authenticate') || '').to.include('Basic'); });"]}}]
+        },
+        {
+          "name": "POST /boletos operador senha errada -> 401",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"senha-errada","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"123456\",\n  \"numeroControleCliente\": \"CTRL-SENHA-ERRADA\",\n  \"valorNominal\": 50.00\n}" },
+            "description": "Objetivo: validar falha de credencial (C5). Esperado: 401."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 401', function () { pm.response.to.have.status(401); });"]}}]
+        },
+        {
+          "name": "POST /boletos com auditor -> 403",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{auditorUsuario}}","type":"string"},{"key":"password","value":"{{auditorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"123456\",\n  \"numeroControleCliente\": \"CTRL-AUDITOR-403\",\n  \"valorNominal\": 50.00\n}" },
+            "description": "Objetivo: validar RBAC do emissor (C5). Esperado: 403."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 403', function () { pm.response.to.have.status(403); });","const ct = (pm.response.headers.get('Content-Type') || '').toLowerCase();","if (ct.includes('application/json')) {","  const json = pm.response.json();","  pm.test('Envelope 403 padrao', function () {","    pm.expect(json.status).to.eql(403);","    pm.expect(json.codigo).to.eql('FORBIDDEN');","  });","}"]}}]
+        },
+        {
+          "name": "POST /boletos com operador -> 201",
+          "event": [
+            {"listen":"prerequest","script":{"type":"text/javascript","exec":["if (!pm.collectionVariables.get('numeroControleCliente')) {","  pm.collectionVariables.set('numeroControleCliente', 'CTRL-' + Date.now());","}"]}},
+            {"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 201', function () { pm.response.to.have.status(201); });","const json = pm.response.json();","pm.test('Status negocio AGUARDANDO_REGISTRO', function () { pm.expect(json.status).to.eql('AGUARDANDO_REGISTRO'); });","pm.collectionVariables.set('boletoId', json.identificador);","const loc = pm.response.headers.get('Location');","pm.test('Header Location presente', function () { pm.expect(loc).to.be.a('string').and.not.empty; });"]}}
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"123456\",\n  \"numeroControleCliente\": \"{{numeroControleCliente}}\",\n  \"valorNominal\": 50.00\n}" },
+            "description": "Objetivo: operador autorizado consegue emitir (C1, C5, C7). Esperado: 201, Location e identificador capturado em boletoId."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 - Emissao - Fluxo Principal",
+      "item": [
+        {
+          "name": "Emitir boleto (captura boletoId + valida Location)",
+          "event": [
+            {"listen":"prerequest","script":{"type":"text/javascript","exec":["pm.collectionVariables.set('numeroControleCliente', 'CTRL-FLUXO-' + Date.now());"]}},
+            {"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 201', function () { pm.response.to.have.status(201); });","const json = pm.response.json();","pm.test('Campos essenciais retornados', function () {","  pm.expect(json.identificador).to.be.a('string');","  pm.expect(json.convenio).to.eql('123456');","  pm.expect(json.numeroControleCliente).to.eql(pm.collectionVariables.get('numeroControleCliente'));","  pm.expect(json.valorNominal).to.eql(50);","  pm.expect(json.status).to.eql('AGUARDANDO_REGISTRO');","});","pm.collectionVariables.set('boletoId', json.identificador);","const loc = pm.response.headers.get('Location') || '';","pm.test('Location contem o boletoId', function () { pm.expect(loc).to.include('/boletos/' + json.identificador); });"]}}
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"123456\",\n  \"numeroControleCliente\": \"{{numeroControleCliente}}\",\n  \"valorNominal\": 50.00\n}" },
+            "description": "Objetivo: fluxo principal de emissao (C1, C2, C3, C7)."
+          }
+        },
+        {
+          "name": "Consultar interno no emissor por boletoId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": "{{emissorUrl}}/interno/boletos/{{boletoId}}",
+            "description": "Objetivo: validar persistencia/consulta local da emissao (C3). Esperado: 200 e identificador igual ao boletoId."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","const json = pm.response.json();","pm.test('Identificador confere', function () { pm.expect(json.identificador).to.eql(pm.collectionVariables.get('boletoId')); });"]}}]
+        },
+        {
+          "name": "Repetir mesma chave (convenio+numeroControleCliente) -> 409",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"123456\",\n  \"numeroControleCliente\": \"{{numeroControleCliente}}\",\n  \"valorNominal\": 50.00\n}" },
+            "description": "Objetivo: validar conflito por duplicidade (C2, C3). Esperado: 409 CONFLICT."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 409', function () { pm.response.to.have.status(409); });","const json = pm.response.json();","pm.test('Envelope de conflito', function () {","  pm.expect(json.status).to.eql(409);","  pm.expect(json.codigo).to.eql('CONFLICT');","});"]}}]
+        }
+      ]
+    },
+    {
+      "name": "04 - Registro - Integracao e Idempotencia",
+      "item": [
+        {
+          "name": "GET interno registro por boletoId",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{auditorUsuario}}","type":"string"},{"key":"password","value":"{{auditorSenha}}","type":"string"}] },
+            "url": "{{registroUrl}}/interno/boletos/{{boletoId}}",
+            "description": "Objetivo: validar integracao emissor->registro no fluxo principal (C4, C3). Esperado: 200 e status REGISTRADO."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","const json = pm.response.json();","pm.test('Registro encontrado', function () {","  pm.expect(json.identificador).to.eql(pm.collectionVariables.get('boletoId'));","  pm.expect(json.status).to.eql('REGISTRADO');","});"]}}]
+        },
+        {
+          "name": "POST /interno/comandos/registro sem credencial -> 401",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "noauth" },
+            "url": "{{registroUrl}}/interno/comandos/registro",
+            "body": { "mode": "raw", "raw": "{\n  \"identificador\": \"{{registroIdentificador}}\"\n}" },
+            "description": "Objetivo: validar autenticacao obrigatoria no registro. Esperado: 401 com desafio Basic."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 401', function () { pm.response.to.have.status(401); });","pm.test('WWW-Authenticate Basic', function () { pm.expect(pm.response.headers.get('WWW-Authenticate') || '').to.include('Basic'); });"]}}]
+        },
+        {
+          "name": "POST /interno/comandos/registro com auditor -> 403",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{auditorUsuario}}","type":"string"},{"key":"password","value":"{{auditorSenha}}","type":"string"}] },
+            "url": "{{registroUrl}}/interno/comandos/registro",
+            "body": { "mode": "raw", "raw": "{\n  \"identificador\": \"{{registroIdentificador}}\"\n}" },
+            "description": "Objetivo: validar RBAC do registro para comando de registro. Esperado: 403 para auditor."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 403', function () { pm.response.to.have.status(403); });","const ct = (pm.response.headers.get('Content-Type') || '').toLowerCase();","if (ct.includes('application/json')) {","  const json = pm.response.json();","  pm.test('Envelope 403 padrao', function () {","    pm.expect(json.status).to.eql(403);","    pm.expect(json.codigo).to.eql('FORBIDDEN');","  });","}"]}}]
+        },
+        {
+          "name": "POST /interno/comandos/registro (1a vez UUID novo) -> 201",
+          "event": [
+            {"listen":"prerequest","script":{"type":"text/javascript","exec":["if (!pm.collectionVariables.get('registroIdentificador')) {","  pm.collectionVariables.set('registroIdentificador', pm.variables.replaceIn('{{$guid}}'));","}"]}},
+            {"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 201', function () { pm.response.to.have.status(201); });","const json = pm.response.json();","pm.test('Body de registro criado', function () {","  pm.expect(json.identificador).to.eql(pm.collectionVariables.get('registroIdentificador'));","  pm.expect(json.status).to.eql('REGISTRADO');","});"]}}
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{registroUrl}}/interno/comandos/registro",
+            "body": { "mode": "raw", "raw": "{\n  \"identificador\": \"{{registroIdentificador}}\"\n}" },
+            "description": "Objetivo: registrar command DTO real RegistrarBoletoCommand (C4, C3)."
+          }
+        },
+        {
+          "name": "POST /interno/comandos/registro (mesmo UUID/body) -> 200",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{registroUrl}}/interno/comandos/registro",
+            "body": { "mode": "raw", "raw": "{\n  \"identificador\": \"{{registroIdentificador}}\"\n}" },
+            "description": "Objetivo: demonstrar idempotencia no registro (C4). Esperado: 200 na segunda chamada identica."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","pm.test('Mesmo identificador', function () { pm.expect(pm.response.json().identificador).to.eql(pm.collectionVariables.get('registroIdentificador')); });"]}}]
+        },
+        {
+          "name": "DELETE interno por registroIdentificador -> 204",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{registroUrl}}/interno/boletos/{{registroIdentificador}}",
+            "description": "Objetivo: limpeza segura de dado de idempotencia no roteiro (C3). Esperado: 204."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 204', function () { pm.response.to.have.status(204); });"]}}]
+        },
+        {
+          "name": "GET interno apos DELETE -> 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{auditorUsuario}}","type":"string"},{"key":"password","value":"{{auditorSenha}}","type":"string"}] },
+            "url": "{{registroUrl}}/interno/boletos/{{registroIdentificador}}",
+            "description": "Objetivo: comprovar remocao (C3). Esperado: 404 NOT_FOUND."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 404', function () { pm.response.to.have.status(404); });","const json = pm.response.json();","pm.test('Envelope 404', function () { pm.expect(json.codigo).to.eql('NOT_FOUND'); });"]}}]
+        }
+      ]
+    },
+    {
+      "name": "05 - Consulta - Autenticacao e RBAC",
+      "item": [
+        {
+          "name": "GET /boletos/{id} sem credencial -> 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": "{{consultaUrl}}/boletos/{{boletoConsultaExemploId}}",
+            "description": "Objetivo: autenticao obrigatoria no consulta (C5). Esperado: 401 com Basic challenge."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 401', function () { pm.response.to.have.status(401); });","pm.test('WWW-Authenticate Basic', function () { pm.expect(pm.response.headers.get('WWW-Authenticate') || '').to.include('Basic'); });"]}}]
+        },
+        {
+          "name": "GET /boletos/{id} senha errada -> 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"senha-errada","type":"string"}] },
+            "url": "{{consultaUrl}}/boletos/{{boletoConsultaExemploId}}",
+            "description": "Objetivo: falha de credencial no consulta (C5). Esperado: 401."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 401', function () { pm.response.to.have.status(401); });"]}}]
+        },
+        {
+          "name": "GET /boletos/{id} com operador -> 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{consultaUrl}}/boletos/{{boletoConsultaExemploId}}",
+            "description": "Objetivo: operador autorizado consulta dado seed real (C5, C3). Esperado: 200 e status AGUARDANDO_REGISTRO."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","const json = pm.response.json();","pm.test('Status esperado', function () { pm.expect(json.status).to.eql('AGUARDANDO_REGISTRO'); });"]}}]
+        },
+        {
+          "name": "GET /boletos/{id} com auditor -> 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{auditorUsuario}}","type":"string"},{"key":"password","value":"{{auditorSenha}}","type":"string"}] },
+            "url": "{{consultaUrl}}/boletos/{{boletoConsultaExemploId}}",
+            "description": "Objetivo: auditor autorizado consulta (RBAC) (C5). Esperado: 200."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });"]}}]
+        },
+        {
+          "name": "GET /boletos/abc (UUID invalido) -> 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{consultaUrl}}/boletos/abc",
+            "description": "Objetivo: validar erro de identificador invalido (C2). Esperado: 400 BAD_REQUEST."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 400', function () { pm.response.to.have.status(400); });","const json = pm.response.json();","pm.test('Envelope 400', function () { pm.expect(json.codigo).to.eql('BAD_REQUEST'); });"]}}]
+        },
+        {
+          "name": "GET /boletos/{UUID inexistente} -> 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{auditorUsuario}}","type":"string"},{"key":"password","value":"{{auditorSenha}}","type":"string"}] },
+            "url": "{{consultaUrl}}/boletos/22222222-2222-2222-2222-222222222222",
+            "description": "Objetivo: validar not found no consulta (C2). Esperado: 404 NOT_FOUND."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 404', function () { pm.response.to.have.status(404); });","const json = pm.response.json();","pm.test('Envelope 404', function () { pm.expect(json.codigo).to.eql('NOT_FOUND'); });"]}}]
+        }
+      ]
+    },
+    {
+      "name": "06 - Validacao e Erros",
+      "item": [
+        {
+          "name": "Emissor - JSON malformado -> 400",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{" },
+            "description": "Objetivo: validar BAD_REQUEST para payload invalido (C2). Esperado: 400 com envelope ApiError."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 400', function () { pm.response.to.have.status(400); });","const json = pm.response.json();","pm.test('Envelope 400', function () { pm.expect(json.codigo).to.eql('BAD_REQUEST'); });"]}}]
+        },
+        {
+          "name": "Emissor - campo obrigatorio ausente -> 400",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"numeroControleCliente\": \"CTRL-SEM-CONVENIO\",\n  \"valorNominal\": 50.00\n}" },
+            "description": "Objetivo: validar bean validation do EmitirBoletoRequest (C2). Esperado: 400."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 400', function () { pm.response.to.have.status(400); });"]}}]
+        },
+        {
+          "name": "Emissor - valor acima do limite -> 422",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"123456\",\n  \"numeroControleCliente\": \"CTRL-LIMITE-422\",\n  \"valorNominal\": 1000000.00\n}" },
+            "description": "Objetivo: validar regra de negocio de limite nominal (C2, C6). Esperado: 422 UNPROCESSABLE_ENTITY."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 422', function () { pm.response.to.have.status(422); });","const json = pm.response.json();","pm.test('Envelope 422', function () { pm.expect(json.codigo).to.eql('UNPROCESSABLE_ENTITY'); });"]}}]
+        },
+        {
+          "name": "Emissor - duplicidade convenio+numeroControle -> 409",
+          "event": [
+            {"listen":"prerequest","script":{"type":"text/javascript","exec":["pm.collectionVariables.set('numeroControleCliente', 'CTRL-409-' + Date.now());"]}},
+            {"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 409', function () { pm.response.to.have.status(409); });"]}}
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "description": "Objetivo: conflito real 409 (C2, C3). Execucao: rode este request duas vezes em sequencia; a segunda execucao deve retornar 409.",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"654321\",\n  \"numeroControleCliente\": \"{{numeroControleCliente}}\",\n  \"valorNominal\": 300.00\n}" }
+          }
+        },
+        {
+          "name": "Registro - GET inexistente -> 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{auditorUsuario}}","type":"string"},{"key":"password","value":"{{auditorSenha}}","type":"string"}] },
+            "url": "{{registroUrl}}/interno/boletos/11111111-1111-1111-1111-111111111111",
+            "description": "Objetivo: validar 404 no registro para id ausente (C2)."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 404', function () { pm.response.to.have.status(404); });"]}}]
+        },
+        {
+          "name": "Registro - comando sem identificador -> 400",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{registroUrl}}/interno/comandos/registro",
+            "body": { "mode": "raw", "raw": "{}" },
+            "description": "Objetivo: validar bean validation do RegistrarBoletoCommand (C2). Esperado: 400."
+          },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 400', function () { pm.response.to.have.status(400); });","const json = pm.response.json();","pm.test('Envelope 400', function () { pm.expect(json.codigo).to.eql('BAD_REQUEST'); });"]}}]
+        },
+        {
+          "name": "Emissor - cenario 502 (condicional) por rejeicao 4xx do registro",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"TESTE\",\n  \"numeroControleCliente\": \"CTRL-502-CONDICIONAL\",\n  \"valorNominal\": 50.00\n}" },
+            "description": "Objetivo: documentar comportamento real do codigo para 502 (C4). No setup padrao, este request tende a 201. O 502 ocorre somente quando a dependencia registro devolve 4xx ao emissor (comportamento coberto por teste automatizado RegistroGatewayTest)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 - Fault Tolerance",
+      "item": [
+        {
+          "name": "[PRECONDICAO] Parar manualmente boleto-registro",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": "{{registroUrl}}/status",
+            "description": "Passo manual: pare o servico boleto-registro antes de executar os proximos requests desta pasta. Esta requisicao e apenas marcador operacional para o roteiro da banca."
+          }
+        },
+        {
+          "name": "Emissor com registro fora do ar -> 503",
+          "event": [
+            {"listen":"prerequest","script":{"type":"text/javascript","exec":["pm.collectionVariables.set('numeroControleCliente', 'CTRL-FT-503-' + Date.now());"]}},
+            {"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 503', function () { pm.response.to.have.status(503); });","const json = pm.response.json();","pm.test('Envelope 503', function () {","  pm.expect(json.status).to.eql(503);","  pm.expect(json.codigo).to.eql('SERVICE_UNAVAILABLE');","});"]}}
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"TESTE\",\n  \"numeroControleCliente\": \"{{numeroControleCliente}}\",\n  \"valorNominal\": 50.00\n}" },
+            "description": "Objetivo: comprovar fallback/indisponibilidade com boleto-registro OFFLINE (C4). Esperado: 503."
+          }
+        },
+        {
+          "name": "Com registro fora do ar, emissao nao persiste localmente (GET interno -> 404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "noauth" },
+            "url": "{{emissorUrl}}/interno/boletos/{{boletoId}}",
+            "description": "Observacao: este check vale para um boletoId de tentativa com falha 503. Se usar o boletoId de uma emissao bem-sucedida anterior, o resultado pode ser 200. Para demonstracao precisa, copie o identificador retornado na tentativa de falha (quando existir no corpo) ou use roteiro automatizado de testes."
+          }
+        },
+        {
+          "name": "[POSCONDICAO] Subir boleto-registro e validar recuperacao",
+          "event": [
+            {"listen":"prerequest","script":{"type":"text/javascript","exec":["pm.collectionVariables.set('numeroControleCliente', 'CTRL-FT-RECOVERY-' + Date.now());"]}},
+            {"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 201', function () { pm.response.to.have.status(201); });"]}}
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"TESTE\",\n  \"numeroControleCliente\": \"{{numeroControleCliente}}\",\n  \"valorNominal\": 50.00\n}" },
+            "description": "Passo posterior: apos religar boleto-registro manualmente, executar este request e esperar 201 para comprovar recuperacao operacional (C4, C6)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 - OpenAPI e Operacional",
+      "item": [
+        {
+          "name": "Emissor - /status",
+          "request": { "method": "GET", "header": [], "url": "{{emissorUrl}}/status", "description": "Objetivo: status operacional do emissor (C1/C6). Esperado: 200 com servico='boleto-emissor' e status='UP'." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","const json = pm.response.json();","pm.test('Servico e status', function () {","  pm.expect(json.servico).to.eql('boleto-emissor');","  pm.expect(json.status).to.eql('UP');","});"]}}]
+        },
+        {
+          "name": "Registro - /status",
+          "request": { "method": "GET", "header": [], "url": "{{registroUrl}}/status", "description": "Objetivo: status operacional do registro. Esperado: 200 com servico='boleto-registro'." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","pm.test('Servico registro', function () { pm.expect(pm.response.json().servico).to.eql('boleto-registro'); });"]}}]
+        },
+        {
+          "name": "Consulta - /status",
+          "request": { "method": "GET", "header": [], "url": "{{consultaUrl}}/status", "description": "Objetivo: status operacional do consulta. Esperado: 200 com servico='boleto-consulta'." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","pm.test('Servico consulta', function () { pm.expect(pm.response.json().servico).to.eql('boleto-consulta'); });"]}}]
+        },
+        {
+          "name": "Emissor - /q/openapi",
+          "request": { "method": "GET", "header": [], "url": "{{emissorUrl}}/q/openapi", "description": "Objetivo: OpenAPI exposto no emissor (C1). Esperado: 200 contendo 'openapi'." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","pm.test('Corpo contem openapi', function () { pm.expect(pm.response.text()).to.include('openapi'); });"]}}]
+        },
+        {
+          "name": "Registro - /q/openapi",
+          "request": { "method": "GET", "header": [], "url": "{{registroUrl}}/q/openapi", "description": "Objetivo: OpenAPI exposto no registro. Esperado: 200 contendo 'openapi'." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","pm.test('Corpo contem openapi', function () { pm.expect(pm.response.text()).to.include('openapi'); });"]}}]
+        },
+        {
+          "name": "Consulta - /q/openapi",
+          "request": { "method": "GET", "header": [], "url": "{{consultaUrl}}/q/openapi", "description": "Objetivo: OpenAPI exposto no consulta. Esperado: 200 contendo 'openapi'." },
+          "event": [{"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 200', function () { pm.response.to.have.status(200); });","pm.test('Corpo contem openapi', function () { pm.expect(pm.response.text()).to.include('openapi'); });"]}}]
+        },
+        {
+          "name": "Swagger UI - Emissor (apenas URL)",
+          "request": { "method": "GET", "header": [], "url": "{{emissorUrl}}/q/swagger-ui", "description": "Interface web: abrir no navegador/Postman visualizer se desejado. URL: {{emissorUrl}}/q/swagger-ui" }
+        },
+        {
+          "name": "Swagger UI - Registro (apenas URL)",
+          "request": { "method": "GET", "header": [], "url": "{{registroUrl}}/q/swagger-ui", "description": "Interface web: URL {{registroUrl}}/q/swagger-ui" }
+        },
+        {
+          "name": "Swagger UI - Consulta (apenas URL)",
+          "request": { "method": "GET", "header": [], "url": "{{consultaUrl}}/q/swagger-ui", "description": "Interface web: URL {{consultaUrl}}/q/swagger-ui" }
+        }
+      ]
+    },
+    {
+      "name": "09 - Roteiro da Banca",
+      "item": [
+        {
+          "name": "Passo 1 - Health geral (emissor)",
+          "request": { "method": "GET", "header": [], "url": "{{emissorUrl}}/q/health/ready", "description": "Roteiro: com 3 servicos ligados, iniciar demonstracao por health/readiness." }
+        },
+        {
+          "name": "Passo 2 - RBAC emissor (auditor -> 403)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{auditorUsuario}}","type":"string"},{"key":"password","value":"{{auditorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"123456\",\n  \"numeroControleCliente\": \"CTRL-BANCA-403\",\n  \"valorNominal\": 50.00\n}" },
+            "description": "Roteiro: provar 403 para papel sem permissao de emissao."
+          }
+        },
+        {
+          "name": "Passo 3 - Emissao principal (operador -> 201)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"123456\",\n  \"numeroControleCliente\": \"CTRL-BANCA-201\",\n  \"valorNominal\": 50.00\n}" },
+            "description": "Roteiro: emissao com 201, Location e identificador."
+          }
+        },
+        {
+          "name": "Passo 4 - Consulta no registro por boletoId",
+          "request": { "method": "GET", "header": [], "auth": { "type": "basic", "basic": [{"key":"username","value":"{{auditorUsuario}}","type":"string"},{"key":"password","value":"{{auditorSenha}}","type":"string"}] }, "url": "{{registroUrl}}/interno/boletos/{{boletoId}}", "description": "Roteiro: comprovar integracao emissor->registro." }
+        },
+        {
+          "name": "Passo 5 - Consulta externa no consulta (operador -> 200 com UUID seed)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{consultaUrl}}/boletos/{{boletoConsultaExemploId}}",
+            "description": "Roteiro: usar dado seed real do modulo consulta."
+          }
+        },
+        {
+          "name": "Passo 6 - Fault tolerance (registro OFF -> emissor 503)",
+          "event": [
+            {"listen":"prerequest","script":{"type":"text/javascript","exec":["pm.collectionVariables.set('numeroControleCliente', 'CTRL-BANCA-503-' + Date.now());"]}},
+            {"listen":"test","script":{"type":"text/javascript","exec":["pm.test('Status 503', function () { pm.response.to.have.status(503); });","const json = pm.response.json();","pm.test('Envelope 503', function () {","  pm.expect(json.status).to.eql(503);","  pm.expect(json.codigo).to.eql('SERVICE_UNAVAILABLE');","});"]}}
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "auth": { "type": "basic", "basic": [{"key":"username","value":"{{operadorUsuario}}","type":"string"},{"key":"password","value":"{{operadorSenha}}","type":"string"}] },
+            "url": "{{emissorUrl}}/boletos",
+            "body": { "mode": "raw", "raw": "{\n  \"convenio\": \"TESTE\",\n  \"numeroControleCliente\": \"{{numeroControleCliente}}\",\n  \"valorNominal\": 50.00\n}" },
+            "description": "Roteiro: antes de executar, pare manualmente boleto-registro. Esperado: 503. Depois religar registro e repetir emissao para 201."
+          }
+        }
+      ]
+    }
+  ]
+}

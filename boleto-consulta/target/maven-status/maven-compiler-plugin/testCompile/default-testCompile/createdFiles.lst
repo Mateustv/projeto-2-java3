@@ -1,0 +1,7 @@
+br\com\caixa\cobranca\consulta\ConsultaBoletoResourceTest.class
+br\com\caixa\cobranca\consulta\ObservabilidadeTest.class
+br\com\caixa\cobranca\consulta\AutenticacaoConsultaBoletoResourceTest.class
+br\com\caixa\cobranca\consulta\OpenApiResourceTest.class
+br\com\caixa\cobranca\consulta\StatusResourceTest.class
+br\com\caixa\cobranca\consulta\DadosExemploConfigTest$SemDadosExemploProfile.class
+br\com\caixa\cobranca\consulta\DadosExemploConfigTest.class

@@ -1,0 +1,16 @@
+br\com\caixa\cobranca\consulta\models\BoletoConsultaEntity.class
+br\com\caixa\cobranca\consulta\repositories\ConsultaRepository.class
+br\com\caixa\cobranca\consulta\services\ConsultaBoletoService.class
+br\com\caixa\cobranca\consulta\controllers\ConsultaBoletoResource.class
+br\com\caixa\cobranca\consulta\security\SecurityRoles.class
+br\com\caixa\cobranca\consulta\services\UsuariosIniciaisLoader.class
+br\com\caixa\cobranca\consulta\exceptions\RecursoNaoEncontradoException.class
+br\com\caixa\cobranca\consulta\repositories\UsuarioRepository.class
+br\com\caixa\cobranca\consulta\handlers\ApiExceptionHandler.class
+br\com\caixa\cobranca\consulta\StatusResource.class
+br\com\caixa\cobranca\consulta\models\StatusBoleto.class
+br\com\caixa\cobranca\consulta\StatusResponse.class
+br\com\caixa\cobranca\consulta\dtos\BoletoConsulta.class
+br\com\caixa\cobranca\consulta\exceptions\IdentificadorInvalidoException.class
+br\com\caixa\cobranca\consulta\models\Usuario.class
+br\com\caixa\cobranca\consulta\dtos\ApiError.class

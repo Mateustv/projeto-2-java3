@@ -1,0 +1,6 @@
+br\com\caixa\cobranca\registro\RegistroResourceTest.class
+br\com\caixa\cobranca\registro\AutenticacaoRegistroResourceTest.class
+br\com\caixa\cobranca\registro\RegistroPayloadInvalidoTest.class
+br\com\caixa\cobranca\registro\StatusResourceTest.class
+br\com\caixa\cobranca\registro\ObservabilidadeTest.class
+br\com\caixa\cobranca\registro\OpenApiResourceTest.class
